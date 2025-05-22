@@ -14,7 +14,7 @@ public class OrderService {
         if (!isAddressValid.test(order)) {
             throw new InvalidAddressException("Invalid delivery address");
         }
-        // Process order logic can go here
+
     }
 }
 

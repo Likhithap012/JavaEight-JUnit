@@ -1,98 +1,113 @@
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.gevernova.LibraryBookLendingSystem.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class LibraryServiceTest {
 
-    private LibraryService service;
+    private LibraryService libraryService;
     private User user;
-    private Book book1;
-    private Book book2;
-    private Book book3;
-    private Book book4;
+    private Book book1, book2, book3, book4;
 
     @BeforeEach
-    void setUp() {
-        book1 = new Book("Java Basics", "Alice", "Programming");
-        book2 = new Book("Spring Boot", "Bob", "Programming");
-        book3 = new Book("Harry Potter", "J.K. Rowling", "Fantasy");
-        book4 = new Book("Lord of the Rings", "Tolkien", "Fantasy");
-
-        service = new LibraryService(List.of(book1, book2, book3, book4));
-        user = new User("Likhitha");
+    public void setup() {
+        book1 = new Book("Java Programming", "Alice", "Education");
+        book2 = new Book("Spring Boot Guide", "Bob", "Technology");
+        book3 = new Book("Cooking 101", "Carol", "Cooking");
+        book4 = new Book("Mystery Novel", "Dan", "Fiction");
+        libraryService = new LibraryService(List.of(book1, book2, book3, book4));
+        user = new User("John");
     }
 
-    @Test
-    void testBorrowBookSuccess() throws Exception {
-        service.borrowBook(user, "Java Basics");
+    // Positive Test Cases
 
+    @Test
+    public void testBorrowBookSuccessfully() throws Exception {
+        libraryService.borrowBook(user, "Java Programming");
         assertTrue(book1.isBorrowed());
-        assertEquals(1, user.getBorrowedBooks().size());
-        assertEquals(book1, user.getBorrowedBooks().get(0));
+        assertTrue(user.getBorrowedBooks().contains(book1));
     }
 
     @Test
-    void testBorrowBookUnavailable() throws Exception {
-        service.borrowBook(user, "Java Basics");
+    public void testReturnBookSuccessfully() throws Exception {
+        libraryService.borrowBook(user, "Java Programming");
+        libraryService.returnBook(user, "Java Programming");
+        assertFalse(book1.isBorrowed());
+        assertFalse(user.getBorrowedBooks().contains(book1));
+    }
 
+    @Test
+    public void testListAvailableBooks() {
+        book1.borrow(); // mark book1 as borrowed
+        List<Book> availableBooks = libraryService.listAvailableBooks();
+        assertFalse(availableBooks.contains(book1));
+        assertTrue(availableBooks.contains(book2));
+        assertTrue(availableBooks.contains(book3));
+        assertTrue(availableBooks.contains(book4));
+    }
+
+    @Test
+    public void testFilterBooksByAuthor() {
+        List<Book> aliceBooks = libraryService.filterBooksByAuthor("Alice");
+        assertEquals(1, aliceBooks.size());
+        assertEquals("Java Programming", aliceBooks.get(0).getTitle());
+    }
+
+    @Test
+    public void testFilterBooksByGenre() {
+        List<Book> techBooks = libraryService.filterBooksByGenre("Technology");
+        assertEquals(1, techBooks.size());
+        assertEquals("Spring Boot Guide", techBooks.get(0).getTitle());
+    }
+
+    // Negative Test Cases
+
+    @Test
+    public void testBorrowBookNotFound() {
         BookUnavailableException ex = assertThrows(BookUnavailableException.class, () -> {
-            service.borrowBook(new User("AnotherUser"), "Java Basics");
+            libraryService.borrowBook(user, "Nonexistent Book");
+        });
+        assertEquals("Book not found", ex.getMessage());
+    }
+
+    @Test
+    public void testBorrowBookAlreadyBorrowed() throws Exception {
+        libraryService.borrowBook(user, "Java Programming");
+        User user2 = new User("Jane");
+        BookUnavailableException ex = assertThrows(BookUnavailableException.class, () -> {
+            libraryService.borrowBook(user2, "Java Programming");
         });
         assertEquals("Book already borrowed", ex.getMessage());
     }
 
     @Test
-    void testBorrowBookLimitExceeded() throws Exception {
-        service.borrowBook(user, "Java Basics");
-        service.borrowBook(user, "Spring Boot");
-        service.borrowBook(user, "Harry Potter");
-
+    public void testBorrowBookLimitExceeded() throws Exception {
+        libraryService.borrowBook(user, "Java Programming");
+        libraryService.borrowBook(user, "Spring Boot Guide");
+        libraryService.borrowBook(user, "Cooking 101");
         BookLimitExceededException ex = assertThrows(BookLimitExceededException.class, () -> {
-            service.borrowBook(user, "Lord of the Rings");
+            libraryService.borrowBook(user, "Mystery Novel");
         });
         assertEquals("User cannot borrow more than 3 books", ex.getMessage());
     }
 
     @Test
-    void testReturnBookSuccess() throws Exception {
-        service.borrowBook(user, "Harry Potter");
-        service.returnBook(user, "Harry Potter");
-
-        assertFalse(book3.isBorrowed());
-        assertTrue(user.getBorrowedBooks().isEmpty());
+    public void testReturnBookNotFound() {
+        BookUnavailableException ex = assertThrows(BookUnavailableException.class, () -> {
+            libraryService.returnBook(user, "Nonexistent Book");
+        });
+        assertEquals("Book not found", ex.getMessage());
     }
 
     @Test
-    void testReturnBookNotBorrowedByUser() throws Exception {
-        service.borrowBook(new User("AnotherUser"), "Spring Boot");
-
+    public void testReturnBookNotBorrowedByUser() throws Exception {
+        libraryService.borrowBook(user, "Java Programming");
+        User user2 = new User("Jane");
         BookUnavailableException ex = assertThrows(BookUnavailableException.class, () -> {
-            service.returnBook(user, "Spring Boot");
+            libraryService.returnBook(user2, "Java Programming");
         });
         assertEquals("User has not borrowed this book", ex.getMessage());
-    }
-
-    @Test
-    void testFindBookByTitleOptional() {
-        assertTrue(service.findBookByTitle("Harry Potter").isPresent());
-        assertFalse(service.findBookByTitle("Nonexistent Book").isPresent());
-    }
-
-    @Test
-    void testFilterByAuthor() {
-        List<Book> result = service.filterBooksByAuthor("Alice");
-        assertEquals(1, result.size());
-        assertEquals(book1, result.get(0));
-    }
-
-    @Test
-    void testFilterByGenre() {
-        List<Book> fantasyBooks = service.filterBooksByGenre("Fantasy");
-        assertEquals(2, fantasyBooks.size());
     }
 }

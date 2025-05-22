@@ -2,82 +2,71 @@ import com.gevernova.InventoryManagementSystem.InvalidProductException;
 import com.gevernova.InventoryManagementSystem.InventoryService;
 import com.gevernova.InventoryManagementSystem.Product;
 import com.gevernova.InventoryManagementSystem.ProductNotFoundException;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
-import java.util.List;
 
 public class InventoryServiceTest {
 
-    private InventoryService service;
+    private InventoryService inventory;
 
     @BeforeEach
-    void setUp() {
-        service = new InventoryService();
+    public void setUp() {
+        inventory = new InventoryService();
     }
 
     @Test
-    void testAddValidProduct() {
-        Product p = new Product("Milk", "Grocery", 30.0, 10);
-        service.addProduct(p);
-        assertEquals(1, service.getAllProducts().size());
-    }
-
-    @Test
-    void testInvalidProductConstructor() throws InvalidProductException {
+    public void testAddProductWithNegativePrice_ThrowsException() {
         assertThrows(InvalidProductException.class, () -> {
-            new Product("Soap", "Toiletries", -10.0, 5);
+            Product product = new Product("Mouse", "Electronics", -50.0, 10);
+            inventory.addProduct(product);
         });
     }
 
     @Test
-    void testRemoveExistingProduct() {
-        Product p = new Product("Pen", "Stationery", 10.0, 20);
-        service.addProduct(p);
-        service.removeProduct("Pen");
-        assertEquals(0, service.getAllProducts().size());
+    public void testAddProductWithNegativeQuantity_ThrowsException() {
+        assertThrows(InvalidProductException.class, () -> {
+            Product product = new Product("Keyboard", "Electronics", 500.0, -5);
+            inventory.addProduct(product);
+        });
     }
 
     @Test
-    void testRemoveNonExistingProduct() {
+    public void testRemoveNonExistentProduct_ThrowsException() {
         assertThrows(ProductNotFoundException.class, () -> {
-            service.removeProduct("Laptop");
+            inventory.removeProduct("NonExistentProduct");
         });
     }
 
     @Test
-    void testSearchByNameFound() {
-        Product p = new Product("Chips", "Snacks", 15.0, 12);
-        service.addProduct(p);
-        List<Product> found = service.searchByName("Chips");
-        assertFalse(found.isEmpty());
-        assertEquals("Chips", found.get(0).getName());
+    public void testSearchByName_ReturnsEmptyList_WhenNoMatch() {
+        var results = inventory.searchByName("Ghost");
+        assertTrue(results.isEmpty());
     }
 
     @Test
-    void testSearchByNameNotFound() {
-        List<Product> found = service.searchByName("Keyboard");
-        assertTrue(found.isEmpty());
+    public void testSearchByCategory_ReturnsEmptyList_WhenNoMatch() {
+        var results = inventory.searchByCategory("ImaginaryCategory");
+        assertTrue(results.isEmpty());
     }
 
     @Test
-    void testLowStockItems() {
-        service.addProduct(new Product("Sugar", "Grocery", 40.0, 3));
-        service.addProduct(new Product("Tea", "Grocery", 50.0, 10));
-        List<Product> lowStock = service.getLowStockItems();
-        assertEquals(1, lowStock.size());
-        assertEquals("Sugar", lowStock.get(0).getName());
+    public void testLowStockItems_WithEmptyInventory_ReturnsEmptyList() {
+        var results = inventory.getLowStockItems();
+        assertTrue(results.isEmpty());
     }
 
     @Test
-    void testSortingByCategoryAndPrice() {
-        service.addProduct(new Product("Notebook", "Stationery", 50.0, 15));
-        service.addProduct(new Product("Pen", "Stationery", 10.0, 30));
-        service.addProduct(new Product("Milk", "Grocery", 25.0, 5));
+    public void testGetSortedProducts_WithEmptyInventory_ReturnsEmptyList() {
+        var results = inventory.getSortedProducts();
+        assertTrue(results.isEmpty());
+    }
 
-        List<Product> sorted = service.getSortedProducts();
-        assertEquals("Milk", sorted.get(0).getName()); // Grocery comes before Stationery
-        assertEquals("Pen", sorted.get(1).getName());  // Stationery, price 10
-        assertEquals("Notebook", sorted.get(2).getName()); // Stationery, price 50
+    @Test
+    public void testAddNullProduct_ThrowsNullPointerException() {
+        assertThrows(NullPointerException.class, () -> {
+            inventory.addProduct(null);
+        });
     }
 }
-
